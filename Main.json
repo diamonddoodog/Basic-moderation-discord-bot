@@ -1,0 +1,80 @@
+require('dotenv').config();
+const { Client, Intents, Permissions } = require('discord.js');
+
+// Create a new client instance
+const client = new Client({
+    intents: [
+        Intents.FLAGS.GUILDS,
+        Intents.FLAGS.GUILD_MESSAGES,
+        Intents.FLAGS.GUILD_MEMBERS
+    ]
+});
+
+// Ready event
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}!`);
+});
+
+// Event listener for commands
+client.on('messageCreate', async (message) => {
+    if (!message.content.startsWith('!') || message.author.bot) return;
+
+    const args = message.content.slice(1).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+    const target = message.mentions.members.first();
+
+    if (!message.member.permissions.has(Permissions.FLAGS.MODERATE_MEMBERS)) {
+        return message.reply("You don't have the required permissions to use moderation commands!");
+    }
+
+    if (command === 'ban') {
+        if (!target) return message.reply('Please mention a user to ban!');
+        try {
+            await target.ban({ reason: args.slice(1).join(' ') || 'No reason provided' });
+            message.reply(`${target.user.tag} has been banned.`);
+        } catch (error) {
+            message.reply('I was unable to ban the user.');
+            console.error(error);
+        }
+    }
+
+    if (command === 'kick') {
+        if (!target) return message.reply('Please mention a user to kick!');
+        try {
+            await target.kick(args.slice(1).join(' ') || 'No reason provided');
+            message.reply(`${target.user.tag} has been kicked.`);
+        } catch (error) {
+            message.reply('I was unable to kick the user.');
+            console.error(error);
+        }
+    }
+
+    if (command === 'warn') {
+        if (!target) return message.reply('Please mention a user to warn!');
+        try {
+            const reason = args.slice(1).join(' ') || 'No reason provided';
+            message.reply(`${target.user.tag} has been warned for: ${reason}`);
+            // You can implement a warning system by storing warnings in a database.
+        } catch (error) {
+            message.reply('I was unable to warn the user.');
+            console.error(error);
+        }
+    }
+
+    if (command === 'timeout') {
+        if (!target) return message.reply('Please mention a user to timeout!');
+        const duration = parseInt(args[1]); // Duration in seconds
+        if (isNaN(duration)) return message.reply('Please specify a valid duration in seconds.');
+
+        try {
+            await target.timeout(duration * 1000, args.slice(2).join(' ') || 'No reason provided');
+            message.reply(`${target.user.tag} has been timed out for ${duration} seconds.`);
+        } catch (error) {
+            message.reply('I was unable to timeout the user.');
+            console.error(error);
+        }
+    }
+});
+
+// Log in to Discord
+client.login(process.env.TOKEN);
